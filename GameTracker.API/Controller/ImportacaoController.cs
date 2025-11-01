@@ -5,8 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GameTracker.API.Controller
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class ImportacaoController : ControllerBase
     {
         private readonly ImportacaoCsvService _importacaoCsvService;
@@ -18,12 +18,9 @@ namespace GameTracker.API.Controller
             _logger = logger;
         }
 
-        /// <summary>
-        /// Importa um arquivo CSV de jogos (HowLongToBeat) para o banco de dados.
-        /// </summary>
         [HttpPost("csv")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> ImportarCsv([FromForm] ImportacaoArquivoDto dto)
+        public async Task<IActionResult> ImportarCsv([FromForm] ImportacaoArquivoDto dto, CancellationToken ct)
         {
             if (dto.Arquivo == null || dto.Arquivo.Length == 0)
                 return BadRequest("Nenhum arquivo CSV foi enviado.");
@@ -31,21 +28,22 @@ namespace GameTracker.API.Controller
             try
             {
                 using var stream = dto.Arquivo.OpenReadStream();
-                await _importacaoCsvService.ImportarJogosAsync(stream);
+                var result = await _importacaoCsvService.ImportarJogosAsync(stream, ct);
 
-                _logger.LogInformation("Importação CSV concluída: {NomeArquivo}", dto.Arquivo.FileName);
+                _logger.LogInformation("Importação CSV concluída: {NomeArquivo}. Lidos={TotalLidos} Inseridos={Inseridos} Ignorados={Ignorados}",
+                    dto.Arquivo.FileName, result.TotalLidos, result.Inseridos, result.Ignorados);
 
-                return Ok(new
-                {
-                    Mensagem = "Importação concluída com sucesso!",
-                    Arquivo = dto.Arquivo.FileName,
-                    TamanhoKb = (dto.Arquivo.Length / 1024.0).ToString("N1") + " KB"
-                });
+                return Ok(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao importar o arquivo CSV: {NomeArquivo}", dto.Arquivo.FileName);
-                return StatusCode(500, $"Erro interno ao importar o arquivo: {ex.Message}");
+                _logger.LogError(ex, "Erro ao importar o arquivo CSV: {NomeArquivo}", dto.Arquivo?.FileName);
+#if DEBUG
+                // Em desenvolvimento, retornar detalhes para facilitar debug
+                return StatusCode(500, new { Mensagem = "Erro interno ao importar o arquivo", Detalhe = ex.Message });
+#else
+                return StatusCode(500, "Erro interno ao importar o arquivo.");
+#endif
             }
         }
     }

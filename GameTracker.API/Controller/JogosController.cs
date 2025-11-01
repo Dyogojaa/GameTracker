@@ -100,7 +100,7 @@ public class JogosController : ControllerBase
     }
 
     /// <summary>
-    /// Atualiza um jogo existente
+    /// Atualiza completamente um jogo existente
     /// </summary>
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Atualizar(Guid id, [FromBody] Jogo jogoAtualizado)
@@ -165,6 +165,9 @@ public class JogosController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Atualiza parcialmente um jogo (nota, horas, dataFim, comentários, status)
+    /// </summary>
     [HttpPatch("{id:guid}")]
     public async Task<IActionResult> AtualizarParcial(Guid id, [FromBody] JsonElement atualizacao)
     {
@@ -174,27 +177,84 @@ public class JogosController : ControllerBase
             if (jogo == null)
                 return NotFound($"Jogo com ID {id} não encontrado.");
 
-            // Verifica e aplica campos dinamicamente
+            // Atualiza campos dinamicamente
             if (atualizacao.TryGetProperty("nota", out var notaProp))
-                jogo.Nota = notaProp.GetDecimal();
+            {
+                if (notaProp.ValueKind == JsonValueKind.Number && notaProp.TryGetDecimal(out var nota))
+                    jogo.Nota = nota;
+            }
+
+            if (atualizacao.TryGetProperty("horasJogadas", out var horasProp))
+            {
+                if (horasProp.ValueKind == JsonValueKind.Number && horasProp.TryGetDouble(out var horas))
+                    jogo.HorasJogadas = horas;
+            }
+
+            if (atualizacao.TryGetProperty("dataFim", out var dataFimProp))
+            {
+                if (dataFimProp.ValueKind == JsonValueKind.String &&
+                    DateTime.TryParse(dataFimProp.GetString(), out var dataFim))
+                    jogo.DataFim = dataFim;
+            }
 
             if (atualizacao.TryGetProperty("comentarios", out var comentariosProp))
                 jogo.Comentarios = comentariosProp.GetString();
 
             if (atualizacao.TryGetProperty("status", out var statusProp))
             {
-                if (Enum.TryParse<StatusJogo>(statusProp.GetInt32().ToString(), out var statusEnum))
+                if (statusProp.ValueKind == JsonValueKind.String &&
+                    Enum.TryParse<StatusJogo>(statusProp.GetString(), true, out var statusEnum))
+                    jogo.Status = statusEnum;
+                else if (statusProp.ValueKind == JsonValueKind.Number &&
+                    Enum.TryParse<StatusJogo>(statusProp.GetInt32().ToString(), out statusEnum))
                     jogo.Status = statusEnum;
             }
 
+            // Define DataFim automaticamente se finalizado
+            if (jogo.Status == StatusJogo.Finalizado && jogo.DataFim == null)
+                jogo.DataFim = DateTime.Now;
+
             await _context.SaveChangesAsync();
 
+            _logger.LogInformation("Jogo {Id} atualizado parcialmente.", id);
             return Ok(jogo);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro ao atualizar parcialmente o jogo {Id}", id);
             return StatusCode(500, "Erro interno ao atualizar parcialmente o jogo.");
+        }
+    }
+
+    /// <summary>
+    /// Retorna todos os jogos sem horas registradas
+    /// </summary>
+    [HttpGet("sem-horas")]
+    public async Task<IActionResult> ObterSemHoras()
+    {
+        try
+        {
+            var jogosSemHoras = await _context.Jogos
+                .AsNoTracking()
+                .Where(j => j.HorasJogadas == null || j.HorasJogadas == 0)
+                .OrderBy(j => j.Titulo)
+                .Select(j => new
+                {
+                    j.Id,
+                    j.Titulo,
+                    j.Plataforma,
+                    j.Status,
+                    j.Nota,
+                    j.HorasJogadas
+                })
+                .ToListAsync();
+
+            return Ok(jogosSemHoras);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao buscar jogos sem horas");
+            return StatusCode(500, "Erro interno ao buscar jogos sem horas.");
         }
     }
 }

@@ -1,0 +1,46 @@
+﻿@using Microsoft.JSInterop
+
+<nav class="flex justify-between items-center w-full text-sm font-medium">
+    <div class="flex gap-6 items-center">
+        <NavLink href="/dashboard" class="nav-link" ActiveClass="nav-active">
+            🏠 Dashboard
+        </NavLink>
+
+        <NavLink href="/jogos" class="nav-link" ActiveClass="nav-active">
+            🎮 Jogos
+        </NavLink>
+
+        <NavLink href="/importar" class="nav-link" ActiveClass="nav-active">
+            📥 Importar CSV
+        </NavLink>
+
+        <!-- Dropdown Gráficos -->
+        <div class="relative group">
+            <button class="nav-link">📊 Gráficos ▾</button>
+            <div class="absolute hidden group-hover:block bg-white border border-gray-200 rounded-md shadow-md mt-2 py-1 w-48 z-50">
+                <NavLink href="/graficos/plataformas"
+                         class="block px-4 py-2 hover:bg-gray-100 text-gray-700"
+                         ActiveClass="active">
+                    🎮 Por Plataforma
+                </NavLink>
+                <NavLink href="/graficos/notas"
+                         class="block px-4 py-2 hover:bg-gray-100 text-gray-700"
+                         ActiveClass="active">
+                    ⭐ Nota Média
+                </NavLink>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botão de tema separado (isolado visual e funcionalmente) -->
+    <div class="flex items-center gap-4">
+        
+
+
+        <a href="https://learn.microsoft.com/aspnet/core/" target="_blank" class="nav-link">
+            ℹ️ Sobre
+        </a>
+    </div>
+</nav>
+
+

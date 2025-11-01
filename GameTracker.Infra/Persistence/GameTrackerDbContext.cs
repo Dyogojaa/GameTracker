@@ -27,7 +27,7 @@ namespace GameTracker.Infra.Persistence
                 entity.Property(e => e.Genero).HasMaxLength(50);
 
                 entity.Property(e => e.Nota)
-                       .HasPrecision(4, 2); // Exemplo: 9.75
+                       .HasPrecision(5, 2); // Exemplo: 9.75
             });
 
             base.OnModelCreating(modelBuilder);
