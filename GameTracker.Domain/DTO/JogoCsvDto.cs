@@ -13,5 +13,7 @@
         public string? MainExtras { get; set; }
         public string? Completionist { get; set; }
         public string? Storefront { get; set; }
+
+        public string? LastUpdated { get; set; } // opcional (caso tenha 2 datas)
     }
 }

@@ -7,7 +7,9 @@ using GameTracker.Infra.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
+using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace GameTracker.Application.Services
 {
@@ -39,37 +41,38 @@ namespace GameTracker.Application.Services
             using var reader = new StreamReader(csvStream, Encoding.UTF8);
             using var csv = new CsvReader(reader, config);
 
-            // opcional: registrar ClassMap para tolerância de nomes de colunas
-            var registros = csv.GetRecords<JogoCsvDto>().ToList();
+            // lê o cabeçalho (se existir) e prepara para iteração
+            await csv.ReadAsync();
+            if (config.HasHeaderRecord)
+                csv.ReadHeader();
 
-            result.TotalLidos = registros.Count;
-            var linha = 1; // considera 1 = cabeçalho, mas você pode ajustar para número real
-            foreach (var r in registros)
+            int linha = 1; // número da linha (1 = cabeçalho)
+            while (await csv.ReadAsync())
             {
                 linha++;
                 if (ct.IsCancellationRequested) break;
 
+                JogoCsvDto? r = null;
                 try
                 {
-                    // validações básicas
-                    if (string.IsNullOrWhiteSpace(r.Title))
+                    // obtém o registro mapeado
+                    r = csv.GetRecord<JogoCsvDto>();
+
+                    // valida básica
+                    if (r == null || string.IsNullOrWhiteSpace(r.Title))
                     {
                         result.Ignorados++;
-                        result.Erros.Add(new ImportErrorDto { Linha = linha, Title = r.Title, Mensagem = "Title vazio" });
+                        result.Erros.Add(new ImportErrorDto { Linha = linha, Title = r?.Title, Mensagem = "Title vazio" });
                         continue;
                     }
 
                     var titulo = r.Title.Trim();
                     var plataforma = string.IsNullOrWhiteSpace(r.Platform) ? "Desconhecida" : r.Platform.Trim();
 
-                    // valida comprimento (exemplo)
-                    if (titulo.Length > 200)
-                        titulo = titulo.Substring(0, 200);
+                    if (titulo.Length > 200) titulo = titulo.Substring(0, 200);
+                    if (plataforma.Length > 50) plataforma = plataforma.Substring(0, 50);
 
-                    if (plataforma.Length > 50)
-                        plataforma = plataforma.Substring(0, 50);
-
-                    // evita duplicidade simples (pode ser melhorado)
+                    // evita duplicidade simples
                     var existe = await _context.Jogos.AnyAsync(j => j.Titulo == titulo && j.Plataforma == plataforma, ct);
                     if (existe)
                     {
@@ -77,20 +80,19 @@ namespace GameTracker.Application.Services
                         continue;
                     }
 
-                    // mapear para entidade com validação de tipos e ranges
+                    // cria entidade
                     var jogo = new Jogo
                     {
                         Titulo = titulo,
                         Plataforma = plataforma,
-                        Comentarios = string.IsNullOrWhiteSpace(r.ReviewNotes) ? (string.IsNullOrWhiteSpace(r.Storefront) ? null : $"Origem: {r.Storefront}") : r.ReviewNotes
+                        Comentarios = string.IsNullOrWhiteSpace(r.ReviewNotes)
+                            ? (string.IsNullOrWhiteSpace(r.Storefront) ? null : $"Origem: {r.Storefront}")
+                            : r.ReviewNotes
                     };
 
                     // Nota
                     jogo.Nota = ParseDecimalNullable(r.Review);
-
-                    // converte notas 0–100 para 0–10 se necessário
-                    if (jogo.Nota > 10)
-                        jogo.Nota = Math.Round(jogo.Nota.Value / 10, 2);
+                    if (jogo.Nota > 10) jogo.Nota = Math.Round(jogo.Nota.Value / 10, 2);
 
                     // Status
                     jogo.Status = (!string.IsNullOrWhiteSpace(r.Completed) && r.Completed.Trim().Equals("X", StringComparison.OrdinalIgnoreCase))
@@ -99,20 +101,33 @@ namespace GameTracker.Application.Services
                             ? StatusJogo.Backlog
                             : StatusJogo.Jogando);
 
-                    // DataFim
-                    if (jogo.Status == StatusJogo.Finalizado && jogo.DataFim == null)
-                        jogo.DataFim = DateTime.Now;
-
-                    // HorasJogadas
+                    // HorasJogadas (mantendo sua lógica)
                     var horas = ConverterHoras(r.MainStory)
                                 + ConverterHoras(r.MainExtras)
                                 + ConverterHoras(r.Completionist);
+                    jogo.HorasJogadas = Convert.ToDouble(horas);
 
-                    jogo.HorasJogadas = Convert.ToDouble(horas); // ajuste se sua propriedade for decimal?
+                    // === EXTRAÇÃO DE DataFim (Completion Date) — campo 13 (índice 12) ===
+                    // usamos csv.Context.Parser.Record para acessar o array de campos da linha atual
+                    var campos = csv.Context.Parser.Record; // string[] com cada coluna já separada
+                    DateTime? dataFim = null;
+                    if (campos != null && campos.Length > 12)
+                    {
+                        var raw = campos[12]?.Trim() ?? string.Empty;
+                        dataFim = ParseDateNullable(raw);
+                    }
 
+                    if (dataFim.HasValue)
+                    {
+                        jogo.DataFim = dataFim.Value;
+                    }
+                    else if (jogo.Status == StatusJogo.Finalizado)
+                    {
+                        // se estiver marcado como finalizado e não veio data, marca agora
+                        jogo.DataFim = DateTime.Now;
+                    }
 
-
-                    // adiciona e salva em batch pequeno (por registro para isolar erros)
+                    // salva
                     _context.Jogos.Add(jogo);
                     try
                     {
@@ -121,11 +136,8 @@ namespace GameTracker.Application.Services
                     }
                     catch (DbUpdateException dbEx)
                     {
-                        // pega inner exception para diagnostico
                         var inner = dbEx.InnerException?.Message ?? dbEx.Message;
                         _logger.LogError(dbEx, "Erro ao salvar jogo linha {Linha} - {Title} - {Inner}", linha, titulo, inner);
-
-                        // opcional: remover entidade do ChangeTracker para não interferir nos próximos
                         _context.Entry(jogo).State = EntityState.Detached;
 
                         result.Erros.Add(new ImportErrorDto
@@ -152,6 +164,7 @@ namespace GameTracker.Application.Services
                 }
             }
 
+            result.TotalLidos = result.Inseridos + result.Ignorados + result.Erros.Count;
             return result;
         }
 
@@ -203,5 +216,31 @@ namespace GameTracker.Application.Services
                 return d;
             return null;
         }
+
+        // Helper: tenta parsear várias formas de data/time comuns do CSV
+        private DateTime? ParseDateNullable(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return null;
+
+            // limpeza básica: remove aspas e "--"
+            raw = raw.Trim().Trim('"').Trim();
+            if (string.IsNullOrEmpty(raw) || raw == "--") return null;
+
+            // tenta parse flexível: data ou data+hora
+            if (DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dt))
+                return dt;
+
+            if (DateTime.TryParse(raw, new CultureInfo("pt-BR"), DateTimeStyles.AssumeLocal, out dt))
+                return dt;
+
+            // formatos explícitos comuns: "yyyy-MM-dd", "yyyy-MM-dd HH:mm:ss"
+            string[] formatos = { "yyyy-MM-dd", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-ddTHH:mm:ss", "MM/dd/yyyy", "MM/dd/yyyy HH:mm:ss" };
+            if (DateTime.TryParseExact(raw, formatos, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dt))
+                return dt;
+
+            return null;
+        }
+
+
     }
 }

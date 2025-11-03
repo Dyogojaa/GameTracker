@@ -17,7 +17,8 @@ namespace GameTracker.API.DTO
 
         public decimal PercentualFinalizados { get; set; }
         public decimal HorasMediaPorJogo { get; set; }
-
+        
+        public int JogosPlatinados { get; set; }
 
         public List<DistribuicaoDto> PorPlataforma { get; set; } = new();
         public List<DistribuicaoDto> PorGenero { get; set; } = new();

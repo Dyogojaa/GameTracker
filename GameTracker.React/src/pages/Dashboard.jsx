@@ -26,15 +26,17 @@ export default function Dashboard() {
   }, []);
 
   const renderStars = (nota) => {
+    if (!nota) return null;
     const stars = [];
     const fullStars = Math.floor(nota);
     const hasHalfStar = nota % 1 >= 0.5;
+
     for (let i = 0; i < fullStars; i++)
       stars.push(<FaStar key={`s${i}`} className="text-yellow-400" />);
     if (hasHalfStar)
       stars.push(<FaStarHalfAlt key="half" className="text-yellow-400" />);
     while (stars.length < 5)
-      stars.push(<FaRegStar key={`e${stars.length}`} className="text-gray-400" />);
+      stars.push(<FaRegStar key={`e${stars.length}`} className="text-gray-300" />);
     return stars;
   };
 
@@ -52,13 +54,15 @@ export default function Dashboard() {
       </h1>
 
       {/* === CARDS DE RESUMO === */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        {/* Total */}
         <div className="bg-white rounded-xl shadow-md p-5 flex flex-col items-center border-t-4 border-emerald-500">
           <FaGamepad className="text-emerald-600 text-3xl mb-2" />
           <h3 className="font-semibold text-gray-600">Total de Jogos</h3>
           <p className="text-2xl font-bold text-gray-900">{resumo.totalJogos}</p>
         </div>
 
+        {/* Finalizados */}
         <div className="bg-white rounded-xl shadow-md p-5 flex flex-col items-center border-t-4 border-emerald-500">
           <FaCheckCircle className="text-emerald-600 text-3xl mb-2" />
           <h3 className="font-semibold text-gray-600">Finalizados</h3>
@@ -67,17 +71,28 @@ export default function Dashboard() {
           </p>
         </div>
 
+        {/* Horas */}
         <div className="bg-white rounded-xl shadow-md p-5 flex flex-col items-center border-t-4 border-emerald-500">
           <FaClock className="text-emerald-600 text-3xl mb-2" />
           <h3 className="font-semibold text-gray-600">Horas Jogadas</h3>
           <p className="text-2xl font-bold text-gray-900">{resumo.horasTotais}</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-5 flex flex-col items-center border-t-4 border-emerald-500">
+        {/* Nota */}
+        <div className="bg-white rounded-xl shadow-md p-5 flex flex-col items-center border-t-4 border-yellow-400">
           <FaStar className="text-yellow-500 text-3xl mb-2" />
           <h3 className="font-semibold text-gray-600">Nota Média</h3>
           <p className="text-2xl font-bold text-gray-900">
             {resumo.notaMediaGeral.toFixed(1)}
+          </p>
+        </div>
+
+        {/* 🏆 Platinados */}
+        <div className="bg-white rounded-xl shadow-md p-5 flex flex-col items-center border-t-4 border-yellow-500">
+          <FaTrophy className="text-yellow-500 text-3xl mb-2 animate-pulse" />
+          <h3 className="font-semibold text-gray-600">Platinados</h3>
+          <p className="text-2xl font-bold text-gray-900">
+            {resumo.jogosPlatinados}
           </p>
         </div>
       </div>

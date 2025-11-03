@@ -41,12 +41,17 @@ namespace GameTracker.API.Controllers
                 var jogosBacklog = jogos.Count(j => j.Status == StatusJogo.Backlog);
                 var jogosJogando = jogos.Count(j => j.Status == StatusJogo.Jogando);
 
+                // 👇 Novo: jogos platinados
+                var jogosPlatinados = jogos.Count(j => j.Status == StatusJogo.Platinado);
+
                 var jogosAnoAtual = jogos.Count(j => j.DataFim?.Year == anoAtual);
                 var horasTotais = jogos.Sum(j => (decimal)(j.HorasJogadas ?? 0));
                 var horasAnoAtual = jogos.Where(j => j.DataFim?.Year == anoAtual)
                                          .Sum(j => (decimal)(j.HorasJogadas ?? 0));
 
-                var notaMedia = Math.Round(jogos.Where(j => j.Nota != null).Average(j => j.Nota!.Value), 2);
+                var notaMedia = jogos.Any(j => j.Nota != null)
+                    ? Math.Round(jogos.Where(j => j.Nota != null).Average(j => j.Nota!.Value), 2)
+                    : 0;
 
                 var porPlataforma = jogos.GroupBy(j => j.Plataforma)
                     .Select(g => new DistribuicaoDto
@@ -83,7 +88,7 @@ namespace GameTracker.API.Controllers
                     .ToList();
 
                 var ultimosJogosFinalizados = jogos
-                    .Where(j => j.Status == StatusJogo.Finalizado && j.DataFim != null)
+                    .Where(j => (j.Status == StatusJogo.Finalizado || j.Status == StatusJogo.Platinado) && j.DataFim != null)
                     .OrderByDescending(j => j.DataFim)
                     .Take(5)
                     .Select(j => new JogoResumoDto
@@ -120,6 +125,7 @@ namespace GameTracker.API.Controllers
                     JogosFinalizados = jogosFinalizados,
                     JogosBacklog = jogosBacklog,
                     JogosJogando = jogosJogando,
+                    JogosPlatinados = jogosPlatinados, // 👈 novo campo aqui
                     HorasTotais = horasTotais,
                     HorasAnoAtual = horasAnoAtual,
                     NotaMediaGeral = notaMedia,
@@ -130,20 +136,14 @@ namespace GameTracker.API.Controllers
                     TopJogos = topJogos
                 };
 
-
-                // Calcula percentual de finalizados e média de horas por jogo
-                var percentualFinalizados = totalJogos > 0
+                // Calcula percentual e média
+                resumo.PercentualFinalizados = totalJogos > 0
                     ? Math.Round((decimal)jogosFinalizados / totalJogos * 100, 2)
                     : 0;
 
-                var horasMediaPorJogo = totalJogos > 0
+                resumo.HorasMediaPorJogo = totalJogos > 0
                     ? Math.Round(horasTotais / totalJogos, 2)
                     : 0;
-
-                // Atribui ao DTO
-                resumo.PercentualFinalizados = percentualFinalizados;
-                resumo.HorasMediaPorJogo = horasMediaPorJogo;
-
 
                 return Ok(resumo);
             }
@@ -153,6 +153,7 @@ namespace GameTracker.API.Controllers
                 return StatusCode(500, "Erro interno ao gerar resumo do dashboard.");
             }
         }
+
 
         [HttpGet("evolucao")]
         public async Task<IActionResult> GetEvolucao()
