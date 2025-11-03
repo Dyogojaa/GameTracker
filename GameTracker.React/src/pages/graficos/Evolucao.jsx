@@ -1,103 +1,109 @@
 import React, { useEffect, useState } from "react";
-import { get } from "../../api/apiClient";
 import {
-  LineChart,
-  Line,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
+  CartesianGrid,
   LabelList,
 } from "recharts";
-import { FaChartLine } from "react-icons/fa6";
+
+function formatMonthLabel(yyyymm) {
+  try {
+    const [year, month] = yyyymm.split("-");
+    const date = new Date(Number(year), Number(month) - 1, 1);
+    return date.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+  } catch {
+    return yyyymm;
+  }
+}
 
 export default function Evolucao() {
-  const [dados, setDados] = useState([]);
+  const [data, setData] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const anoAtual = new Date().getFullYear();
 
   useEffect(() => {
-    async function carregar() {
+    async function carregarDados() {
       try {
-        const data = await get("dashboard/resumo");
+        setLoading(true);
+        setError(null);
 
-        // 🧠 Simulação (caso ainda não venha da API)
-        const simulacao = [
-          { mes: "Jan", finalizados: 2 },
-          { mes: "Fev", finalizados: 1 },
-          { mes: "Mar", finalizados: 4 },
-          { mes: "Abr", finalizados: 3 },
-          { mes: "Mai", finalizados: 5 },
-          { mes: "Jun", finalizados: 2 },
-          { mes: "Jul", finalizados: 4 },
-          { mes: "Ago", finalizados: 3 },
-          { mes: "Set", finalizados: 2 },
-          { mes: "Out", finalizados: 3 },
-          { mes: "Nov", finalizados: 1 },
-          { mes: "Dez", finalizados: 2 },
-        ];
+        const res = await fetch("/api/dashboard/evolucao");
 
-        setDados(data.evolucaoMensal || simulacao);
+        if (!res.ok) {
+          throw new Error(`Erro HTTP ${res.status}`);
+        }
+
+        const json = await res.json();
+
+        const dados = (json || [])
+          .map((r) => ({
+            mes: r.mes,
+            quantidade: Number(r.quantidade ?? 0),
+            label: formatMonthLabel(r.mes),
+          }))
+          .sort((a, b) => a.mes.localeCompare(b.mes));
+
+        setData(dados);
+        setTotal(dados.reduce((acc, cur) => acc + cur.quantidade, 0));
       } catch (err) {
-        console.error("Erro ao carregar gráfico de evolução:", err);
+        console.error("Erro ao buscar evolução:", err);
+        setError(err.message || "Erro ao carregar dados");
+      } finally {
+        setLoading(false);
       }
     }
-    carregar();
+
+    carregarDados();
   }, []);
 
-  // ✅ Tooltip customizado
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const { mes, finalizados } = payload[0].payload;
-      return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-md">
-          <p className="font-semibold text-emerald-700">{mes}</p>
-          <p className="text-sm text-gray-600">
-            {finalizados} jogos finalizados
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-emerald-700 flex items-center gap-2 mb-4">
-        <FaChartLine /> Evolução de Jogos Finalizados
-      </h1>
+    <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-xl font-bold mb-1">
+          📈 Evolução de Jogos Finalizados —{" "}
+          <span className="text-emerald-600">{anoAtual}</span>
+        </h2>
+        <p className="text-gray-600 mb-4">
+          Total acumulado:{" "}
+          <span className="text-emerald-600 font-semibold">{total}</span> jogos
+        </p>
 
-      {dados.length === 0 ? (
-        <p className="text-gray-500">Carregando dados...</p>
-      ) : (
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={dados}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-              <XAxis dataKey="mes" tick={{ fill: "#444" }} />
-              <YAxis tick={{ fill: "#444" }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Line
-                type="monotone"
-                dataKey="finalizados"
-                stroke="#10b981"
-                strokeWidth={3}
-                dot={{ r: 6, fill: "#10b981", strokeWidth: 2, stroke: "#fff" }}
-                activeDot={{ r: 8, fill: "#059669" }}
-                animationDuration={1000}
+        {loading && <p className="text-gray-600">Carregando dados...</p>}
+        {error && <p className="text-red-600">Erro: {error}</p>}
+
+        {!loading && !error && data.length === 0 && (
+          <p className="text-gray-600">Nenhum dado encontrado.</p>
+        )}
+
+        {!loading && !error && data.length > 0 && (
+          <div style={{ width: "100%", height: 320 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={data}
+                margin={{ top: 10, right: 16, left: 0, bottom: 20 }}
               >
-                {/* 🎯 Mostra os valores acima de cada ponto */}
-                <LabelList
-                  dataKey="finalizados"
-                  position="top"
-                  fill="#064e3b"
-                  fontSize={14}
-                  fontWeight={600}
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <YAxis allowDecimals={false} />
+                <Tooltip
+                  formatter={(value) => [`${value} jogos`, "Finalizados"]}
+                  labelFormatter={(label) => `Mês: ${label}`}
                 />
-              </Line>
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+                <Bar dataKey="quantidade" fill="#10B981" radius={[6, 6, 0, 0]}>
+                  <LabelList dataKey="quantidade" position="top" />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

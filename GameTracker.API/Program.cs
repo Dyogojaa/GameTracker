@@ -31,6 +31,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddScoped<ImportacaoCsvService>();
+builder.Services.AddScoped<DashboardService>();
 
 var app = builder.Build();
 

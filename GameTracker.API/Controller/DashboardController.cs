@@ -1,4 +1,5 @@
 ﻿using GameTracker.API.DTO;
+using GameTracker.Application.Services;
 using GameTracker.Domain;
 using GameTracker.Domain.DTO;
 using GameTracker.Domain.Entities;
@@ -15,11 +16,13 @@ namespace GameTracker.API.Controllers
     {
         private readonly GameTrackerDbContext _context;
         private readonly ILogger<DashboardController> _logger;
+        private readonly DashboardService _dashboardService;
 
-        public DashboardController(GameTrackerDbContext context, ILogger<DashboardController> logger)
+        public DashboardController(GameTrackerDbContext context, ILogger<DashboardController> logger, DashboardService dashboardService)
         {
             _context = context;
             _logger = logger;
+            _dashboardService = dashboardService;
         }
 
         [HttpGet("resumo")]
@@ -149,6 +152,13 @@ namespace GameTracker.API.Controllers
                 _logger.LogError(ex, "Erro ao gerar resumo do dashboard");
                 return StatusCode(500, "Erro interno ao gerar resumo do dashboard.");
             }
+        }
+
+        [HttpGet("evolucao")]
+        public async Task<IActionResult> GetEvolucao()
+        {
+            var evolucao = await _dashboardService.ObterEvolucaoMensalAsync();
+            return Ok(evolucao);
         }
     }
 }
