@@ -1,27 +1,33 @@
-using GameTracker.Application.Services;
+﻿using GameTracker.Application.Services;
 using GameTracker.Infra.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// =================== Servi�os ===================
-
-// Adiciona suporte a controllers (para usar Controllers tradicionais)
+// =================== Serviços ===================
 builder.Services.AddControllers();
-
-// Adiciona suporte ao Swagger com UI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configura o EF Core
+// Banco de dados
 builder.Services.AddDbContext<GameTrackerDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// CORS (para o futuro, quando integrar com o dashboard web)
-builder.Services.AddCors(opt =>
+// ✅ Política de CORS
+builder.Services.AddCors(options =>
 {
-    opt.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+    options.AddPolicy("AllowAll", policy =>
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReact", policy =>
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyMethod()
+              .AllowAnyHeader());
 });
 
 builder.Services.AddScoped<ImportacaoCsvService>();
@@ -29,7 +35,6 @@ builder.Services.AddScoped<ImportacaoCsvService>();
 var app = builder.Build();
 
 // =================== Pipeline ===================
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -37,9 +42,17 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
 
-// Mapeia controllers
+// ⚠️ A ordem correta é esta ↓↓↓
+app.UseRouting();
+
+
+
+app.UseCors("AllowAll");
+app.UseAuthorization();
+
+// ✅ MapControllers deve vir após o CORS
 app.MapControllers();
+
 
 app.Run();

@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================================================
+   🎮 GameTracker Hyperdyo — Estilo Global v2.1
+   ========================================================= */
+
+html, body {
+  @apply bg-gray-100 text-gray-800 min-h-screen font-sans;
+}
+
+/* ===== CABEÇALHO ===== */
+header {
+  background: linear-gradient(90deg, #009688, #26a69a);
+  color: #fff;
+  @apply shadow-md sticky top-0 z-50;
+}
+
+header .title {
+  @apply text-2xl font-bold tracking-tight;
+}
+
+/* ===== NAVEGAÇÃO ===== */
+.navbar {
+  @apply flex items-center justify-between px-6 py-3;
+}
+
+.nav-link {
+  @apply text-white/90 font-medium px-3 py-2 rounded transition duration-200;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  @apply bg-white/20 text-white;
+}
+
+/* ===== DROPDOWN ===== */
+.dropdown {
+  @apply relative;
+}
+
+.dropdown-btn {
+  @apply cursor-pointer text-white/90 font-medium transition duration-200;
+}
+
+.dropdown-content {
+  @apply absolute left-0 mt-2 hidden w-48 bg-white border border-gray-200 rounded-md shadow-lg;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropdown-content a {
+  @apply block px-4 py-2 text-gray-700 hover:bg-emerald-50 hover:text-emerald-700;
+}
+
+/* ===== BOTÕES ===== */
+button {
+  @apply transition duration-200;
+}
+
+button:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+/* ===== CARDS ===== */
+.card {
+  @apply bg-white rounded-xl shadow-md p-6 border-t-4 border-emerald-500;
+}
+
+.card:hover {
+  @apply shadow-lg scale-[1.01];
+  transition: transform 0.2s ease-in-out;
+}
+
+/* ===== TÍTULOS ===== */
+h1, h2, h3 {
+  @apply font-bold text-gray-800;
+}
+
+/* ===== TABELAS ===== */
+table {
+  @apply w-full border-collapse bg-white rounded-lg shadow;
+}
+
+th {
+  @apply bg-emerald-600 text-white font-semibold text-left p-2;
+}
+
+td {
+  @apply border-t p-2;
+}
+
+/* ===== RODAPÉ ===== */
+footer {
+  @apply text-center text-gray-500 py-4 mt-10 text-sm;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #9ca3af;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280;
+}
