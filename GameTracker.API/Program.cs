@@ -35,6 +35,7 @@ builder.Services.AddScoped<DashboardService>();
 
 var app = builder.Build();
 
+
 // =================== Pipeline ===================
 if (app.Environment.IsDevelopment())
 {
