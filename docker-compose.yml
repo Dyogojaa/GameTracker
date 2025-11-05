@@ -1,0 +1,29 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: GameTracker.API/Dockerfile
+    container_name: gametracker-api
+    ports:
+      - "5012:5012"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - ConnectionStrings__DefaultConnection=Server=192.168.15.9,1433;Database=GameTrackerDb;User Id=sa;Password=Base123#@;TrustServerCertificate=True;
+    networks:
+      - gametracker-network
+
+  web:
+    build:
+      context: ./GameTracker.React
+      dockerfile: Dockerfile
+    container_name: gametracker-web
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    networks:
+      - gametracker-network
+
+networks:
+  gametracker-network:
+    driver: bridge

@@ -13,48 +13,64 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<GameTrackerDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// ✅ Política de CORS
+// ✅ CORS global
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyHeader()
-              .AllowAnyMethod());
-});
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowReact", policy =>
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyMethod()
-              .AllowAnyHeader());
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod());
 });
 
 builder.Services.AddScoped<ImportacaoCsvService>();
 builder.Services.AddScoped<DashboardService>();
 
+// =================== Configuração de Kestrel ===================
+// Detecta se está rodando dentro de um container (variável padrão do Docker)
+var isRunningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    if (isRunningInContainer)
+    {
+        // 🚀 Ambiente Docker — apenas HTTP
+        options.ListenAnyIP(5012);
+    }
+    else
+    {
+        // 💻 Ambiente local — HTTP + HTTPS
+        options.ListenAnyIP(5012); // HTTP
+        options.ListenAnyIP(7158, listenOptions => listenOptions.UseHttps()); // HTTPS local
+    }
+});
+
 var app = builder.Build();
 
-
 // =================== Pipeline ===================
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Docker")
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "GameTracker.API v1");
+        c.RoutePrefix = "swagger";
+    });
 }
 
-app.UseHttpsRedirection();
 
-// ⚠️ A ordem correta é esta ↓↓↓
 app.UseRouting();
 
-
-
+// ✅ Aplique o CORS aqui (antes de Authorization)
 app.UseCors("AllowAll");
+
+// ⚠️ Removido o UseHttpsRedirection (evita erro no Docker)
 app.UseAuthorization();
 
-// ✅ MapControllers deve vir após o CORS
 app.MapControllers();
 
+// ✅ Logs de inicialização para debug
+Console.WriteLine($"🌐 Ambiente: {(isRunningInContainer ? "Docker (HTTP apenas)" : "Local (HTTP/HTTPS)")}");
+Console.WriteLine($"📡 Endpoints: {string.Join(", ", app.Urls)}");
 
 app.Run();

@@ -1,0 +1,15 @@
+# Ignorar apenas o que é pesado
+node_modules
+.expo
+.expo-shared
+build
+dist
+*.log
+
+# Garantir envio dos arquivos principais
+!app.json
+!package.json
+!eas.json
+!babel.config.js
+!assets/
+!src/

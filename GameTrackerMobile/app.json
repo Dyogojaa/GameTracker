@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "KingHyperdyo.GameTracker",
+    "slug": "gametrackermobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/logo.png",
+    "scheme": "gametrackermobile",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png",
+        "backgroundColor": "#0D1117"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [],
+      "package": "com.dyogojaa.gametrackermobile"
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/logo.png",
+          "imageWidth": 260,
+          "resizeMode": "contain",
+          "backgroundColor": "#0D1117",
+          "dark": {
+            "backgroundColor": "#0D1117"
+          },
+          "statusBar": {
+            "style": "light"
+          }
+        }
+      ]
+    ],
+    "splash": {
+      "image": "./assets/images/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D1117"
+    },
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "apiUrl": "http://192.168.15.9:5012",
+      "eas": {
+        "projectId": "6938883b-bfee-4ba7-bce6-c7cb3edeb649"
+      }
+    },
+    "updates": {
+      "enabled": false
+    },
+    "owner": "dyogojaa"
+  }
+}
