@@ -1,29 +1,58 @@
+version: "3.9"
+
 services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: gametracker-sql
+    restart: always
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "Base123#@"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - "E:\\SQLServer:/var/opt/mssql/data"   # 👈 Usa o MESMO volume físico do outro container
+    networks:
+      - gametracker-net
+      
+  # ===================== API (.NET 8) =====================
   api:
     build:
       context: .
       dockerfile: GameTracker.API/Dockerfile
     container_name: gametracker-api
+    restart: always
+    depends_on:
+      - sqlserver
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=GameTrackerDb;User Id=sa;Password=Base123#@;TrustServerCertificate=True;MultipleActiveResultSets=true"
     ports:
       - "5012:5012"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Docker
-      - ConnectionStrings__DefaultConnection=Server=192.168.15.9,1433;Database=GameTrackerDb;User Id=sa;Password=Base123#@;TrustServerCertificate=True;
     networks:
-      - gametracker-network
+      - gametracker-net
 
+  # ===================== FRONTEND (React Web) =====================
   web:
     build:
       context: ./GameTracker.React
       dockerfile: Dockerfile
     container_name: gametracker-web
-    ports:
-      - "3000:80"
+    restart: always
     depends_on:
       - api
+    environment:
+      - VITE_API_BASE_URL=/api
+    ports:
+      - "3000:80"
     networks:
-      - gametracker-network
+      - gametracker-net
 
+# ===================== REDE COMPARTILHADA =====================
 networks:
-  gametracker-network:
-    driver: bridge
+  gametracker-net:
+
+# ===================== VOLUMES =====================
+volumes:
+  sql_data:
