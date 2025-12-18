@@ -1,4 +1,5 @@
-﻿using GameTracker.Domain;
+﻿using GameTracker.Application.Services;
+using GameTracker.Domain;
 using GameTracker.Domain.Entities;
 using GameTracker.Infra.Persistence;
 using Microsoft.AspNetCore.Mvc;
@@ -257,4 +258,49 @@ public class JogosController : ControllerBase
             return StatusCode(500, "Erro interno ao buscar jogos sem horas.");
         }
     }
+
+
+    /// <summary>
+    /// Busca a capa do jogo na RAWG e grava no banco de dados
+    /// </summary>
+    [HttpPost("{id:guid}/buscar-capa")]
+    public async Task<IActionResult> BuscarESalvarCapa(
+        Guid id,
+        [FromServices] DashboardService dashboardService)
+    {
+        try
+        {
+            var jogo = await _context.Jogos.FindAsync(id);
+            if (jogo == null)
+                return NotFound($"Jogo com ID {id} não encontrado.");
+
+            // Evita sobrescrever capa existente
+            if (!string.IsNullOrWhiteSpace(jogo.CapaUrl))
+                return BadRequest("Este jogo já possui uma capa cadastrada.");
+
+            var capaUrl = await dashboardService.BuscarCapaRawgAsync(jogo.Titulo);
+
+            if (string.IsNullOrWhiteSpace(capaUrl))
+                return NotFound("Não foi possível encontrar a capa para este jogo.");
+
+            jogo.CapaUrl = capaUrl;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Capa gravada com sucesso para o jogo {Titulo}", jogo.Titulo);
+
+            return Ok(new
+            {
+                jogo.Id,
+                jogo.Titulo,
+                jogo.CapaUrl
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao buscar/gravar capa para o jogo {Id}", id);
+            return StatusCode(500, "Erro interno ao buscar a capa do jogo.");
+        }
+    }
+
 }

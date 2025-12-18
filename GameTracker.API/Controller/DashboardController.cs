@@ -118,7 +118,8 @@ namespace GameTracker.API.Controllers
                         Genero = j.Genero,
                         Nota = j.Nota,
                         HorasJogadas = (decimal?)j.HorasJogadas,
-                        DataFim = j.DataFim
+                        DataFim = j.DataFim,
+                        CapaUrl = j.CapaUrl // ✅ LINHA CRÍTICA
                     })
                     .ToList();
 
@@ -134,7 +135,8 @@ namespace GameTracker.API.Controllers
                         Genero = j.Genero,
                         Nota = j.Nota,
                         HorasJogadas = (decimal?)j.HorasJogadas,
-                        DataFim = j.DataFim
+                        DataFim = j.DataFim,
+                        CapaUrl = j.CapaUrl // ✅ LINHA CRÍTICA
                     })
                     .ToList();
 
@@ -185,6 +187,13 @@ namespace GameTracker.API.Controllers
         {
             var evolucao = await _dashboardService.ObterEvolucaoMensalAsync();
             return Ok(evolucao);
+        }
+
+        [HttpGet("testar-capa")]
+        public async Task<IActionResult> TestarCapa([FromQuery] string titulo)
+        {
+            var capa = await _dashboardService.BuscarCapaRawgAsync(titulo);
+            return Ok(new { titulo, capa });
         }
     }
 }

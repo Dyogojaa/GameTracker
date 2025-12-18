@@ -14,5 +14,7 @@ namespace GameTracker.Domain.DTO
         public decimal? Nota { get; set; }
         public decimal? HorasJogadas { get; set; }
         public DateTime? DataFim { get; set; }
+
+        public string? CapaUrl { get; set; } // Adicionado o Link da Capa
     }
 }

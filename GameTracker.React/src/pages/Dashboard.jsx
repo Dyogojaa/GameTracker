@@ -79,29 +79,11 @@ export default function Dashboard() {
   if (!resumo || resumo.totalJogos === 0) {
     return (
       <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-emerald-700 flex items-center gap-2">
-            <FaGamepad className="text-emerald-600" /> Dashboard GameTracker
-          </h1>
-
-          <select
-            className="border rounded-lg px-3 py-2 text-gray-700 shadow-sm"
-            value={anoSelecionado ?? ""}
-            onChange={(e) =>
-              setAnoSelecionado(
-                e.target.value ? Number(e.target.value) : null
-              )
-            }
-          >
-            <option value="">Ano atual</option>
-            {anosDisponiveis.map((ano) => (
-              <option key={ano} value={ano}>
-                {ano}
-              </option>
-            ))}
-          </select>
-        </div>
-
+        <Header
+          anosDisponiveis={anosDisponiveis}
+          anoSelecionado={anoSelecionado}
+          setAnoSelecionado={setAnoSelecionado}
+        />
         <div className="text-center text-gray-500 mt-20">
           Nenhum jogo encontrado para este ano.
         </div>
@@ -111,54 +93,19 @@ export default function Dashboard() {
 
   return (
     <div className="p-6">
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-emerald-700 flex items-center gap-2">
-          <FaGamepad className="text-emerald-600" /> Dashboard GameTracker
-        </h1>
-
-        <select
-          className="border rounded-lg px-3 py-2 text-gray-700 shadow-sm"
-          value={anoSelecionado ?? ""}
-          onChange={(e) =>
-            setAnoSelecionado(e.target.value ? Number(e.target.value) : null)
-          }
-        >
-          <option value="">Ano atual</option>
-          {anosDisponiveis.map((ano) => (
-            <option key={ano} value={ano}>
-              {ano}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Header
+        anosDisponiveis={anosDisponiveis}
+        anoSelecionado={anoSelecionado}
+        setAnoSelecionado={setAnoSelecionado}
+      />
 
       {/* CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <Card icon={<FaGamepad />} title="Jogos no Ano" value={resumo.totalJogos} />
-        <Card
-          icon={<FaCheckCircle />}
-          title="Finalizados"
-          value={resumo.jogosFinalizados}
-        />
-        <Card
-          icon={<FaClock />}
-          title="Horas Jogadas"
-          value={resumo.horasTotais}
-        />
-        <Card
-          icon={<FaStar />}
-          title="Nota Média"
-          value={resumo.notaMediaGeral.toFixed(1)}
-          yellow
-        />
-        <Card
-          icon={<FaTrophy />}
-          title="Platinados"
-          value={resumo.jogosPlatinados}
-          yellow
-          pulse
-        />
+        <Card icon={<FaCheckCircle />} title="Finalizados" value={resumo.jogosFinalizados} />
+        <Card icon={<FaClock />} title="Horas Jogadas" value={resumo.horasTotais} />
+        <Card icon={<FaStar />} title="Nota Média" value={resumo.notaMediaGeral.toFixed(1)} yellow />
+        <Card icon={<FaTrophy />} title="Platinados" value={resumo.jogosPlatinados} yellow pulse />
       </div>
 
       {/* TOP JOGOS */}
@@ -168,16 +115,30 @@ export default function Dashboard() {
             {resumo.topJogos.map((jogo, idx) => (
               <div
                 key={idx}
-                className="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition"
+                className="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition flex gap-4"
               >
-                <h3 className="text-lg font-semibold text-gray-800">
-                  {jogo.titulo}
-                </h3>
-                <p className="text-sm text-gray-500">
-                  Plataforma: {jogo.plataforma}
-                </p>
-                <div className="flex gap-1 mt-2">
-                  {renderStars(jogo.nota / 2)}
+                {/* CAPA */}
+                <img
+                  src={jogo.capaUrl || "/no-cover.png"}
+                  alt={jogo.titulo}
+                  loading="lazy"
+                  className="w-20 h-28 object-cover rounded shadow flex-shrink-0 bg-gray-200"
+                />
+
+                {/* INFO */}
+                <div className="flex flex-col justify-between overflow-hidden">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 truncate">
+                      {jogo.titulo}
+                    </h3>
+                    <p className="text-sm text-gray-500 truncate">
+                      Plataforma: {jogo.plataforma}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-1 mt-2">
+                    {renderStars(jogo.nota / 2)}
+                  </div>
                 </div>
               </div>
             ))}
@@ -190,14 +151,9 @@ export default function Dashboard() {
         <Section title="Últimos Finalizados" icon={<FaCheckCircle />}>
           <ul className="space-y-2">
             {resumo.ultimosJogosFinalizados.map((jogo, idx) => (
-              <li
-                key={idx}
-                className="border-b last:border-none pb-2 flex justify-between"
-              >
+              <li key={idx} className="border-b last:border-none pb-2 flex justify-between">
                 <span>{jogo.titulo}</span>
-                <span className="text-sm text-gray-500">
-                  {jogo.plataforma}
-                </span>
+                <span className="text-sm text-gray-500">{jogo.plataforma}</span>
               </li>
             ))}
           </ul>
@@ -210,6 +166,31 @@ export default function Dashboard() {
 /* =========================
    COMPONENTES AUXILIARES
    ========================= */
+
+function Header({ anosDisponiveis, anoSelecionado, setAnoSelecionado }) {
+  return (
+    <div className="flex justify-between items-center mb-6">
+      <h1 className="text-3xl font-bold text-emerald-700 flex items-center gap-2">
+        <FaGamepad className="text-emerald-600" /> Dashboard GameTracker
+      </h1>
+
+      <select
+        className="border rounded-lg px-3 py-2 text-gray-700 shadow-sm"
+        value={anoSelecionado ?? ""}
+        onChange={(e) =>
+          setAnoSelecionado(e.target.value ? Number(e.target.value) : null)
+        }
+      >
+        <option value="">Ano atual</option>
+        {anosDisponiveis.map((ano) => (
+          <option key={ano} value={ano}>
+            {ano}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 function Card({ icon, title, value, yellow, pulse }) {
   return (

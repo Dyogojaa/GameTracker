@@ -19,6 +19,8 @@ namespace GameTracker.Domain.Entities
         public decimal? Nota { get; set; }
         public string? Comentarios { get; set; }
 
+        public string? CapaUrl { get; set; }
+
         public Guid? UsuarioId { get; set; }
     }
 }
